@@ -24,6 +24,8 @@ export class GetMyGamesUseCase
       query.userId,
       query.queryParams.pageSize,
       query.queryParams.calculateSkip(),
+      query.queryParams.sortBy,
+      query.queryParams.sortDirection,
     );
 
     const items = games.map((game) => PairGameViewDto.mapToView(game));

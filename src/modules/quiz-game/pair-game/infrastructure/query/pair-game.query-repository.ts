@@ -88,8 +88,8 @@ export class PairGameQueryRepository {
 
   /**
    * Получить все игры пользователя (активные и завершенные) с пагинацией
-   * Сортировка: активные игры (ACTIVE, PENDING_SECOND_PLAYER) вверху,
-   * затем завершенные игры по finishGameDate DESC
+   * Сортировка по указанному полю и направлению
+   * Если статусы одинаковые - сортировка по pairCreatedDate DESC
    *
    * @usedIn GetMyGamesUseCase - получение истории игр пользователя
    */
@@ -97,6 +97,8 @@ export class PairGameQueryRepository {
     userId: string,
     pageSize: number,
     skip: number,
+    sortBy: string,
+    sortDirection: string,
   ): Promise<[PairGame[], number]> {
     const queryBuilder = this.repository
       .createQueryBuilder('game')
@@ -112,18 +114,27 @@ export class PairGameQueryRepository {
 
     this.applyGameRelations(queryBuilder);
 
-    // Сортировка: сначала активные игры (приоритет 0), затем завершенные (приоритет 1)
-    // Внутри каждой группы - по finishGameDate DESC
-    queryBuilder
-      .orderBy(
+    // Применяем сортировку по указанному полю
+    const direction = sortDirection.toUpperCase() as 'ASC' | 'DESC';
+
+    if (sortBy === 'status') {
+      // При сортировке по статусу: Active/PendingSecondPlayer первыми при ASC
+      queryBuilder.orderBy(
         `CASE 
-          WHEN game.status IN ('${GameStatus.ACTIVE}', '${GameStatus.PENDING_SECOND_PLAYER}') THEN 0
-          ELSE 1
+          WHEN game.status = '${GameStatus.ACTIVE}' THEN 1
+          WHEN game.status = '${GameStatus.PENDING_SECOND_PLAYER}' THEN 2
+          WHEN game.status = '${GameStatus.FINISHED}' THEN 3
         END`,
-        'ASC',
-      )
-      .addOrderBy('game.finish_game_date', 'DESC')
-      .addOrderBy('questions.order', 'ASC');
+        direction,
+      );
+      // Если статусы одинаковые - сортировка по pairCreatedDate DESC
+      queryBuilder.addOrderBy('game.created_at', 'DESC');
+    } else if (sortBy === 'pairCreatedDate') {
+      queryBuilder.orderBy('game.created_at', direction);
+    }
+
+    // Сортировка вопросов внутри игры
+    queryBuilder.addOrderBy('questions.order', 'ASC');
 
     queryBuilder.limit(pageSize).offset(skip);
 
