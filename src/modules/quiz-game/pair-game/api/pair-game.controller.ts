@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -18,8 +19,11 @@ import { SubmitAnswerInputDto } from './input-dto/submit-answer.input.dto';
 import { AnswerViewDto } from './view-dto/answer.view-dto';
 import { GetCurrentGameQuery } from '../application/query-usecase/get-current-game.usecase';
 import { GetGameByIdQuery } from '../application/query-usecase/get-game-by-id.usecase';
+import { GetMyGamesQuery } from '../application/query-usecase/get-my-games.usecase';
 import { ConnectToGameCommand } from '../application/usecase/connect-to-game.usecase';
 import { SubmitAnswerCommand } from '../application/usecase/submit-answer.usecase';
+import { GetMyGamesQueryParams } from './input-dto/get-my-games-query-params.input-dto';
+import { PaginatedViewDto } from '../../../../core/dto/base.paginated.view-dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('pair-game-quiz/pairs')
@@ -34,6 +38,14 @@ export class PairGameController {
     @ExtractUserForJwtGuard() user: UserContextDto,
   ): Promise<PairGameViewDto> {
     return this.queryBus.execute(new GetCurrentGameQuery(user.id));
+  }
+
+  @Get('my')
+  async getMyGames(
+    @Query() queryParams: GetMyGamesQueryParams,
+    @ExtractUserForJwtGuard() user: UserContextDto,
+  ): Promise<PaginatedViewDto<PairGameViewDto[]>> {
+    return this.queryBus.execute(new GetMyGamesQuery(user.id, queryParams));
   }
 
   @Get(':id')

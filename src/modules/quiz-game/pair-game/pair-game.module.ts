@@ -16,11 +16,16 @@ import { AnswerSubmissionService } from './domain/services/answer-submission.ser
 import { PairGameController } from './api/pair-game.controller';
 import { GetCurrentGameUseCase } from './application/query-usecase/get-current-game.usecase';
 import { GetGameByIdUseCase } from './application/query-usecase/get-game-by-id.usecase';
+import { GetMyGamesUseCase } from './application/query-usecase/get-my-games.usecase';
 import { ConnectToGameUseCase } from './application/usecase/connect-to-game.usecase';
 import { SubmitAnswerUseCase } from './application/usecase/submit-answer.usecase';
 import { QuestionsModule } from '../questions/questions.module';
 
-const QueryHandlers = [GetCurrentGameUseCase, GetGameByIdUseCase];
+const QueryHandlers = [
+  GetCurrentGameUseCase,
+  GetGameByIdUseCase,
+  GetMyGamesUseCase,
+];
 
 const CommandHandlers = [ConnectToGameUseCase, SubmitAnswerUseCase];
 
