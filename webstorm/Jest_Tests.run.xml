@@ -1,0 +1,85 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Jest: All Tests" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: E2E Tests" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=test/.*\\.e2e-spec\\.ts --runInBand" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: Integration Tests" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=test/.*\\.integration\\.spec\\.ts --runInBand" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: Unit Tests" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=src" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: Pair Game E2E" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=test/pair-game\\.e2e-spec\\.ts --runInBand" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: Connect To Game Integration" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=test/integration/pair-game/connect-to-game\\.integration\\.spec\\.ts --runInBand" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+  
+  <configuration default="false" name="Jest: Submit Answer Integration" type="JavaScriptTestRunnerJest">
+    <node-interpreter value="project" />
+    <jest-options value="--config jest.config.json --testPathPattern=test/integration/pair-game/submit-answer\\.integration\\.spec\\.ts --runInBand" />
+    <envs>
+      <env name="ENV_FILE_PATH" value="env/.env.testing" />
+      <env name="NODE_ENV" value="testing" />
+      <env name="JEST_ENV" value="testing" />
+    </envs>
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+</component>

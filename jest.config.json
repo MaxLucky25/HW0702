@@ -1,0 +1,24 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testRegex": "(src/.*\\.spec\\.ts|test/.*\\.e2e-spec\\.ts|test/.*\\.integration\\.spec\\.ts)$",
+  "testTimeout": 30000,
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "tsconfig.json"
+      }
+    ]
+  },
+  "collectCoverageFrom": [
+    "src/**/*.(t|j)s",
+    "!src/**/*.spec.ts",
+    "!test/**/*.e2e-spec.ts",
+    "!test/**/*.integration.spec.ts"
+  ],
+  "coverageDirectory": "coverage",
+  "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.ts"]
+}
