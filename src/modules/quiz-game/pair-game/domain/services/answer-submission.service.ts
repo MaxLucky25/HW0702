@@ -8,6 +8,7 @@ import { DomainException } from '../../../../../core/exceptions/domain-exception
 import { DomainExceptionCode } from '../../../../../core/exceptions/domain-exception-codes';
 import { PlayerRepository } from '../../infrastructure/player.repository';
 import { PairGameRepository } from '../../infrastructure/pair-game.repository';
+import { UserStatisticRepository } from '../../infrastructure/user-statistic.repository';
 
 @Injectable()
 export class AnswerSubmissionService {
@@ -16,6 +17,7 @@ export class AnswerSubmissionService {
     private readonly dataSource: DataSource,
     private readonly pairGameRepository: PairGameRepository,
     private readonly playerRepository: PlayerRepository,
+    private readonly userStatisticRepository: UserStatisticRepository,
   ) {}
 
   async submitAnswer(userId: string, answer: string): Promise<GameAnswer> {
@@ -167,6 +169,31 @@ export class AnswerSubmissionService {
 
       // Завершаем игру
       await this.pairGameRepository.finishGame(game, manager);
+
+      // Обновляем статистику игроков после завершения игры
+      if (firstPlayer && secondPlayer) {
+        // Безопасное вычисление счетов с защитой от NaN
+        const firstPlayerScore =
+          (firstPlayer.score || 0) + (firstPlayer.bonus || 0);
+        const secondPlayerScore =
+          (secondPlayer.score || 0) + (secondPlayer.bonus || 0);
+
+        // Обновляем статистику для первого игрока
+        await this.userStatisticRepository.updateStatisticAfterGame(
+          firstPlayer.userId,
+          firstPlayerScore,
+          secondPlayerScore,
+          manager,
+        );
+
+        // Обновляем статистику для второго игрока
+        await this.userStatisticRepository.updateStatisticAfterGame(
+          secondPlayer.userId,
+          secondPlayerScore,
+          firstPlayerScore,
+          manager,
+        );
+      }
     }
   }
 }

@@ -65,7 +65,9 @@ export class Player {
     player.userId = dto.userId;
     player.role = dto.role;
     player.finishedAt = null;
-    // score и bonus установятся автоматически через @Column({ default: 0 })
+    // Явная инициализация для избежания NaN
+    player.score = 0;
+    player.bonus = 0;
 
     return player;
   }
