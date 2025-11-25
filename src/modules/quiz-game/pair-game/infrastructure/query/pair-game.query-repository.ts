@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, In } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { PairGame } from '../../domain/entities/pair-game.entity';
 import { FindActiveGameByUserIdDto } from '../dto/pair-game-repo.dto';
 import { DomainException } from '../../../../../core/exceptions/domain-exceptions';
@@ -101,34 +101,24 @@ export class PairGameQueryRepository {
     sortDirection: SortDirection,
   ): Promise<[PairGame[], number]> {
     // ========== ЗАГРУЗКА ДАННЫХ ИЗ БД ==========
-    const [allGames, totalCount] = await this.repository.findAndCount({
-      // Загружаем все необходимые связанные данные одним запросом
-      relations: {
-        players: {
-          // Игроки в игре
-          user: true, // Данные пользователей (login, id)
-          answers: {
-            // Ответы каждого игрока
-            gameQuestion: true, // Связь ответа с вопросом игры
-          },
-        },
-        questions: {
-          // Вопросы игры
-          question: true, // Данные самого вопроса (body, correctAnswers)
-        },
-      },
-      // Условия фильтрации
-      where: {
-        players: {
-          userId: userId, // Игры где участвует конкретный пользователь
-        },
-        status: In([
+    // Используем Query Builder для правильной загрузки всех игроков игры
+    const queryBuilder = this.repository
+      .createQueryBuilder('game')
+      .innerJoin('game.players', 'player')
+      .where('player.userId = :userId', { userId })
+      .andWhere('game.status IN (:...statuses)', {
+        statuses: [
           GameStatus.PENDING_SECOND_PLAYER,
           GameStatus.ACTIVE,
           GameStatus.FINISHED,
-        ]),
-      },
-    });
+        ],
+      });
+
+    // Применяем relations для загрузки всех необходимых данных
+    this.applyGameRelations(queryBuilder);
+    queryBuilder.orderBy('questions.order', 'ASC');
+
+    const [allGames, totalCount] = await queryBuilder.getManyAndCount();
 
     // ========== СОРТИРОВКА В ПАМЯТИ ==========
     // Преобразуем направление сортировки в числовой множитель:

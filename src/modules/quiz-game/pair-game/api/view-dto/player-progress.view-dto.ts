@@ -13,7 +13,7 @@ export class PlayerProgressViewDto {
     return {
       answers: player.answers
         ? player.answers
-            .sort((a, b) => a.addedAt.getTime() - b.addedAt.getTime())
+            .sort((a, b) => +a.addedAt - +b.addedAt)
             .map((answer) => AnswerViewDto.mapToView(answer))
         : [],
       player: {
