@@ -110,7 +110,8 @@ export class PairGameQueryRepository {
           GameStatus.ACTIVE,
           GameStatus.FINISHED,
         ],
-      });
+      })
+      .distinct(true);
 
     this.applyGameRelations(queryBuilder);
 
