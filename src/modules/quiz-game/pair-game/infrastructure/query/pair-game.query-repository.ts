@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder, In } from 'typeorm';
 import { PairGame } from '../../domain/entities/pair-game.entity';
 import { FindActiveGameByUserIdDto } from '../dto/pair-game-repo.dto';
 import { DomainException } from '../../../../../core/exceptions/domain-exceptions';
 import { DomainExceptionCode } from '../../../../../core/exceptions/domain-exception-codes';
 import { GameStatus } from '../../domain/dto/game-status.enum';
+import { SortDirection } from '../../../../../core/dto/base.query-params.input-dto';
+import { GamesSortBy } from '../../api/input-dto/get-my-games-query-params.input-dto';
 
 @Injectable()
 export class PairGameQueryRepository {
@@ -88,8 +90,6 @@ export class PairGameQueryRepository {
 
   /**
    * Получить все игры пользователя (активные и завершенные) с пагинацией
-   * Сортировка по указанному полю и направлению
-   * Если статусы одинаковые - сортировка по pairCreatedDate DESC
    *
    * @usedIn GetMyGamesUseCase - получение истории игр пользователя
    */
@@ -97,48 +97,87 @@ export class PairGameQueryRepository {
     userId: string,
     pageSize: number,
     skip: number,
-    sortBy: string,
-    sortDirection: string,
+    sortBy: GamesSortBy,
+    sortDirection: SortDirection,
   ): Promise<[PairGame[], number]> {
-    const queryBuilder = this.repository
-      .createQueryBuilder('game')
-      .innerJoin('game.players', 'player')
-      .where('player.userId = :userId', { userId })
-      .andWhere('game.status IN (:...statuses)', {
-        statuses: [
+    // ========== ЗАГРУЗКА ДАННЫХ ИЗ БД ==========
+    const [allGames, totalCount] = await this.repository.findAndCount({
+      // Загружаем все необходимые связанные данные одним запросом
+      relations: {
+        players: {
+          // Игроки в игре
+          user: true, // Данные пользователей (login, id)
+          answers: {
+            // Ответы каждого игрока
+            gameQuestion: true, // Связь ответа с вопросом игры
+          },
+        },
+        questions: {
+          // Вопросы игры
+          question: true, // Данные самого вопроса (body, correctAnswers)
+        },
+      },
+      // Условия фильтрации
+      where: {
+        players: {
+          userId: userId, // Игры где участвует конкретный пользователь
+        },
+        status: In([
           GameStatus.PENDING_SECOND_PLAYER,
           GameStatus.ACTIVE,
           GameStatus.FINISHED,
-        ],
-      })
-      .distinct(true);
+        ]),
+      },
+    });
 
-    this.applyGameRelations(queryBuilder);
+    // ========== СОРТИРОВКА В ПАМЯТИ ==========
+    // Преобразуем направление сортировки в числовой множитель:
+    // SortDirection.Desc → -1 (по убыванию: 3, 2, 1...)
+    // SortDirection.Asc → 1 (по возрастанию: 1, 2, 3...)
+    const direction = sortDirection === SortDirection.Desc ? -1 : 1;
 
-    // Применяем сортировку по указанному полю
-    const direction = sortDirection.toUpperCase() as 'ASC' | 'DESC';
+    // Сортируем массив игр с помощью функции сравнения
+    allGames.sort((a, b) => {
+      // ===== СОРТИРОВКА ПО СТАТУСУ =====
+      if (sortBy === GamesSortBy.Status) {
+        // Определяем приоритет каждого статуса (меньше число = выше приоритет)
+        const statusOrder = {
+          [GameStatus.ACTIVE]: 1, // Активные игры - самый высокий приоритет
+          [GameStatus.PENDING_SECOND_PLAYER]: 2, // Ожидающие игры - средний приоритет
+          [GameStatus.FINISHED]: 3, // Завершенные игры - низкий приоритет
+        };
 
-    if (sortBy === 'status') {
-      // При сортировке по статусу: Active/PendingSecondPlayer первыми при ASC
-      queryBuilder.orderBy(
-        `CASE 
-          WHEN game.status = '${GameStatus.ACTIVE}' THEN 1
-          WHEN game.status = '${GameStatus.PENDING_SECOND_PLAYER}' THEN 2
-          WHEN game.status = '${GameStatus.FINISHED}' THEN 3
-        END`,
-        direction,
-      );
-      // Если статусы одинаковые - сортировка по pairCreatedDate DESC
-      queryBuilder.addOrderBy('game.created_at', 'DESC');
-    } else if (sortBy === 'pairCreatedDate') {
-      queryBuilder.orderBy('game.created_at', direction);
-    }
+        // Вычисляем разность приоритетов и применяем направление сортировки
+        // Пример: Active(1) vs Finished(3) при ASC: (1-3)*1 = -2 → Active идет первым ✅
+        // Пример: Active(1) vs Finished(3) при DESC: (1-3)*(-1) = 2 → Finished идет первым ✅
+        const statusDiff =
+          (statusOrder[a.status] - statusOrder[b.status]) * direction;
 
-    // Сортировка вопросов внутри игры
-    queryBuilder.addOrderBy('questions.order', 'ASC');
+        // Если статусы разные - возвращаем результат сравнения по статусу
+        if (statusDiff !== 0) return statusDiff;
 
-    queryBuilder.limit(pageSize).offset(skip);
+        // ВТОРИЧНАЯ СОРТИРОВКА: если статусы одинаковые - сортируем по дате создания
+        // Всегда DESC (новые игры сверху), независимо от параметра direction
+        return +b.createdAt - +a.createdAt;
+      }
+      // ===== СОРТИРОВКА ПО ДАТЕ СОЗДАНИЯ =====
+      else if (sortBy === GamesSortBy.PairCreatedDate) {
+        // Простое сравнение дат с учетом направления
+        // ASC: старые игры сначала, DESC: новые игры сначала
+        return (+a.createdAt - +b.createdAt) * direction;
+      }
 
-    return await queryBuilder.getManyAndCount();
+      // Если sortBy не распознан - не меняем порядок
+      return 0;
+    });
+
+    // ========== ПАГИНАЦИЯ ==========
+    // Применяем пагинацию ПОСЛЕ сортировки - берем нужный срез массива
+    // skip = (pageNumber - 1) * pageSize - количество записей для пропуска
+    // Пример: страница 2, размер 10 → skip = 10, берем элементы с 10 по 19
+    const paginatedGames = allGames.slice(skip, skip + pageSize);
+
+    // Возвращаем [отсортированные_и_пагинированные_игры, общее_количество_игр]
+    return [paginatedGames, totalCount];
   }
 }
